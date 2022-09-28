@@ -1,0 +1,13 @@
+---
+version: 1.0.1
+commands:
+  - name: shellwords-v2
+    namespace: golib
+    tags:
+      - shell
+      - go
+      - lib
+    command: go get github.com/mattn/go-shellwords
+    description: |
+      Add shellwords splitter
+      testing
