@@ -34,3 +34,7 @@ which opens an interactive window where you can type "search helm chart," and al
 
 We traverse all commands and index them in the same way as CLI documentation is generated for the Cobra library. 
 Next, by using fuzzy search, we display all matching examples and the source for them, e.g., `helm search repo --help` if a given example comes from the `helm search repo` command help message.
+
+## Like the idea? Give a GitHub star ⭐!
+
+The library is work in progress. Please add a star to let me know that you would be interested in such a library!
