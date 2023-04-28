@@ -69,7 +69,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	return
+	//return
 	h := Hoard{}
 
 	for _, item := range db.Examples {
@@ -94,7 +94,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	return
+	//return
 	idx, err := fuzzyfinder.Find(
 		db.Examples,
 		func(i int) string {

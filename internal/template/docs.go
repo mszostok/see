@@ -6,9 +6,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/charmbracelet/glamour"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"k8s.io/kubectl/pkg/util/templates"
 
 	"go.szostok/see/internal"
 )
@@ -35,14 +35,14 @@ func GenMarkdownTreeCustom(cmd *cobra.Command, db *internal.DB, filePrepender, l
 		return err
 	}
 
-	out, err := glamour.Render(data, "dark")
 	//fmt.Println(out)
 	if err != nil {
 		return err
 	}
 
 	for _, e := range examples {
-		e.Content = out
+		//e.Content = out
+		e.Content = data
 		db.AddExample(e)
 	}
 
@@ -65,6 +65,11 @@ func GenMarkdownCustom(cmd *cobra.Command, linkHandler func(string) string) (str
 	buf := new(bytes.Buffer)
 	name := cmd.CommandPath()
 
+	//cmd.SetOut(buf)
+	templates.UseOptionsTemplates(cmd)
+	//if err := cmd.Usage(); err != nil {
+	//	return "", nil, err
+	//}
 	buf.WriteString("# " + name + "\n\n")
 
 	buf.WriteString(cmd.Short + "\n\n")
@@ -78,18 +83,6 @@ func GenMarkdownCustom(cmd *cobra.Command, linkHandler func(string) string) (str
 		buf.WriteString(cmd.Long + "\n\n")
 	}
 
-	if content, found := hasLookLike(cmd); found {
-		buf.WriteString("## What does it look like?\n\n")
-		for _, link := range content {
-			buf.WriteString(fmt.Sprintf("![](%s)\n", link))
-		}
-		buf.WriteString("\n")
-	}
-
-	if err := printOptions(buf, cmd); err != nil {
-		return "", nil, err
-	}
-
 	if len(cmd.Example) > 0 {
 		examples = internal.ProcessSimpleExamples(cmd.Example)
 
@@ -97,14 +90,18 @@ func GenMarkdownCustom(cmd *cobra.Command, linkHandler func(string) string) (str
 		buf.WriteString(code(cmd.Example))
 	}
 
+	if err := printOptions(buf, cmd); err != nil {
+		return "", nil, err
+	}
+
 	if hasSeeAlso(cmd) {
 		buf.WriteString("## SEE ALSO\n\n")
 		if cmd.HasParent() {
 			parent := cmd.Parent()
 			pname := parent.CommandPath()
-			link := pname + ".md"
-			link = strings.ReplaceAll(link, " ", "_")
-			buf.WriteString(fmt.Sprintf("* [%s](%s) - %s\n", pname, linkHandler(link), parent.Short))
+			//link := pname + ".md"
+			//link = strings.ReplaceAll(link, " ", "_")
+			buf.WriteString(fmt.Sprintf("* %s - %s\n", pname, parent.Short))
 			cmd.VisitParents(func(c *cobra.Command) {
 				if c.DisableAutoGenTag {
 					cmd.DisableAutoGenTag = c.DisableAutoGenTag
@@ -125,6 +122,7 @@ func GenMarkdownCustom(cmd *cobra.Command, linkHandler func(string) string) (str
 			buf.WriteString(fmt.Sprintf("* [%s](%s) - %s\n", cname, linkHandler(link), child.Short))
 		}
 	}
+
 	return buf.String(), examples, nil
 }
 
@@ -132,7 +130,7 @@ func printOptions(buf *bytes.Buffer, cmd *cobra.Command) error {
 	allFlags := pflag.NewFlagSet("aggregated", pflag.ExitOnError)
 	allFlags.SetOutput(buf)
 	local := cmd.NonInheritedFlags()
-	global := cmd.InheritedFlags()
+	//global := cmd.InheritedFlags()
 
 	allFlags.SortFlags = false
 
@@ -140,9 +138,9 @@ func printOptions(buf *bytes.Buffer, cmd *cobra.Command) error {
 		allFlags.AddFlag(flag)
 	})
 	//  print global in the same code block
-	global.VisitAll(func(flag *pflag.Flag) {
-		allFlags.AddFlag(flag)
-	})
+	//global.VisitAll(func(flag *pflag.Flag) {
+	//	allFlags.AddFlag(flag)
+	//})
 
 	if allFlags.HasAvailableFlags() {
 		buf.WriteString("## What are the flags?\n\n```bash\n")
@@ -164,22 +162,21 @@ func hasLookLike(command *cobra.Command) ([]string, bool) {
 func code(text string) string {
 	lines := strings.Split(text, "\n")
 
-	for i, line := range lines {
+	var b strings.Builder
+	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue
 		}
 
-		if strings.HasPrefix(line, CodePrefixLine) {
-			line = strings.ReplaceAll(line, CodePrefixLine, "")
-			lines[i] = fmt.Sprintf("```bash\n%s\n```\n\n", line)
+		if strings.HasPrefix(line, "#") {
+			b.WriteString(fmt.Sprintf("%s\n", strings.TrimSpace(line)))
 		} else {
-			line = strings.ReplaceAll(line, "# ", "")
-			lines[i] = fmt.Sprintf("%s\n\n", line)
+			b.WriteString(fmt.Sprintf("\n%s\n\n", line))
 		}
 	}
 
-	return strings.Join(lines, "")
+	return b.String()
 }
 
 // Test to see if we have a reason to print See Also information in docs
